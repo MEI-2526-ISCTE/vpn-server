@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{process::Command, str::FromStr};
 
 use defguard_wireguard_rs::{
     InterfaceConfiguration, WGApi, WireguardInterfaceApi, host::Peer, key::Key, net::IpAddrMask,
@@ -6,6 +6,8 @@ use defguard_wireguard_rs::{
 use x25519_dalek::{EphemeralSecret, PublicKey};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("1. ===========================================");
+
     // Create new api object for interface management
     let ifname: String = if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") {
         "wg0".into()
@@ -13,17 +15,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "utun3".into()
     };
 
+    println!("2. ===========================================");
+
     #[cfg(not(target_os = "macos"))]
-    let mut wgapi = WGApi::<defguard_wireguard_rs::Kernel>::new(ifname.clone())?;
+    let wgapi = WGApi::<defguard_wireguard_rs::Kernel>::new(ifname.clone())?;
     #[cfg(target_os = "macos")]
     let mut wgapi = WGApi::<defguard_wireguard_rs::Userspace>::new(ifname.clone())?;
+
+    println!("3. ===========================================");
 
     // create host interface
     wgapi.create_interface()?;
 
+    println!("4. ===========================================");
+
     // read current interface status
     let host = wgapi.read_interface_data()?;
     println!("WireGuard interface before configuration: {host:#?}");
+
+    println!("5. ===========================================");
 
     // store peer keys to remove peers later
     let mut peer_keys = Vec::new();
@@ -36,6 +46,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut peer = Peer::new(peer_key);
     let addr = IpAddrMask::from_str("10.20.30.2/32").unwrap();
     peer.allowed_ips.push(addr);
+
+    println!("6. ===========================================");
 
     let interface_config = InterfaceConfiguration {
         name: ifname.clone(),
@@ -70,6 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         wgapi.configure_peer(&peer)?;
     }
 
+    println!("7. ===========================================");
+
     // read current interface status
     let host = wgapi.read_interface_data()?;
     println!("WireGuard interface with peers: {host:#?}");
@@ -83,8 +97,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let host = wgapi.read_interface_data()?;
     println!("WireGuard interface without peers: {host:#?}");
 
-    // remove interface
-    wgapi.remove_interface()?;
+    println!("8. ===========================================");
+
+    Command::new("wg-quick")
+    .arg("strip")
+    .arg(&ifname)
+    .output()?;  // wg-quick strip removes everything cleanly
+
+    println!("9. ===========================================");
+
+    println!("10. ===========================================");
 
     Ok(())
 }
