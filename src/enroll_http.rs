@@ -1,6 +1,6 @@
 use crate::{config::{load_server_config, ensure_server_keys}, peer_registry, wg};
 use base64::{engine::general_purpose, Engine as _};
-use tiny_http::{Server, Method, Response};
+use tiny_http::{Server, Method, Response, Header};
 use defguard_wireguard_rs::WireguardInterfaceApi;
 use crate::filelog;
 use std::fs;
@@ -42,17 +42,25 @@ pub fn spawn_enroll_server() {
                     });
                     let _ = req.respond(Response::from_string(payload.to_string()).with_status_code(200));
                     filelog::write_line("vpn-server.log", &format!("Auto-enrolled peer {}", pubkey_b64));
-                } else if req.method() == &Method::Get {
+                } else if req.method() == &Method::Get || req.method() == &Method::Head {
                     let path = match req.url() {
                         "/" => PathBuf::from("public/index.html"),
                         other => PathBuf::from(format!("public{}", other)),
                     };
                     if let Ok(body) = fs::read(&path) {
-                        let _ = req.respond(Response::from_data(body));
+                        let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
+                        let _ = req.respond(Response::from_data(body).with_header(hdr));
                     } else {
-                        let _ = req.respond(Response::from_string("Not Found").with_status_code(404));
+                        // Fallback to index.html
+                        if let Ok(body) = fs::read("public/index.html") {
+                            let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
+                            let _ = req.respond(Response::from_data(body).with_header(hdr));
+                        } else {
+                            let _ = req.respond(Response::from_string("Not Found").with_status_code(404));
+                        }
                     }
                 } else {
+                    // Acknowledge non-GET requests generically
                     let _ = req.respond(Response::from_string("ok").with_status_code(200));
                 }
             }
