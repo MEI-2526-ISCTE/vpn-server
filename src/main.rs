@@ -46,8 +46,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Cmd::ExportClientConfig { public_key_b64: _ } => {
-            let cfg = load_server_config(None)?;
+        Cmd::ExportClientConfig => {
+            let cfg = ensure_server_keys(load_server_config(None)?, None)?;
             let ep = format!("127.0.0.1:{}", cfg.listen_port);
             let server_pub = {
                 let b64 = cfg.server_private_key_b64.clone().unwrap();
@@ -85,5 +85,5 @@ enum Cmd {
     RemovePeer { public_key_b64: String },
     ListPeers,
     Status,
-    ExportClientConfig { public_key_b64: String },
+    ExportClientConfig,
 }

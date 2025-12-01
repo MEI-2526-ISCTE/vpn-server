@@ -3,5 +3,5 @@ address_cidr = "10.8.0.1/24"
 listen_port = 51820
 peers = []
 nat_enabled = true
-server_private_key_b64 = "Y3RjYAXV67Vx5dzpGLLVo87MIaD2sqscSTepVjv2oAI="
+server_private_key_b64 = "5sQvg3NkEGrKhBeIuBixkkLKVvlEPvjmcLaLskvFycs="
 auto_enroll_dir = "enroll"
