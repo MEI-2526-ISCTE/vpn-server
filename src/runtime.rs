@@ -3,6 +3,7 @@ use base64::{engine::general_purpose, Engine as _};
 use defguard_wireguard_rs::{key::Key, InterfaceConfiguration, WGApi, WireguardInterfaceApi};
 use std::{collections::HashMap, fs, path::PathBuf, process::Command, sync::{Arc, atomic::{AtomicBool, Ordering}} , thread, time::{Duration, Instant}};
 use x25519_dalek::{PublicKey, StaticSecret};
+use crate::enroll_http;
 
 #[cfg(target_os = "windows")]
 fn windows_preflight() -> Result<(), Box<dyn std::error::Error>> {
@@ -76,6 +77,7 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
     let config: InterfaceConfiguration = wg::interface_config(&cfg, &ifname, &server_privkey_b64, &peers_vec)?;
     #[cfg(target_os = "windows")] { wgapi.configure_interface(&config, &[], &[])?; }
     #[cfg(not(target_os = "windows"))] { wgapi.configure_interface(&config)?; }
+    enroll_http::spawn_enroll_server();
     if cfg.nat_enabled { nat::setup_nat(&ifname, cfg.uplink_iface.as_deref()); }
     println!("WireGuard server is LIVE on UDP {}!", cfg.listen_port);
     println!("Server public key: {}", general_purpose::STANDARD.encode(server_public.as_bytes()));
