@@ -3,6 +3,7 @@ use vpn_server::enroll_http;
 
 #[test]
 fn http_responses_are_timely_under_small_load() {
+    std::env::set_var("VPN_HTTP_BIND", "127.0.0.1");
     enroll_http::spawn_enroll_server();
     std::thread::sleep(std::time::Duration::from_millis(300));
     for _ in 0..10 {
@@ -18,4 +19,3 @@ fn http_responses_are_timely_under_small_load() {
         assert!(resp.contains("Content-Type: text/html"));
     }
 }
-

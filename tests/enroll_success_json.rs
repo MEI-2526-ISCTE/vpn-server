@@ -6,6 +6,7 @@ use base64::Engine as _;
 fn enroll_success_returns_json_with_keys() {
     let _ = std::fs::remove_file("server.toml");
     let cfg = config::ensure_server_keys(config::load_server_config(None).unwrap(), None).unwrap();
+    std::env::set_var("VPN_HTTP_BIND", "127.0.0.1");
     enroll_http::spawn_enroll_server();
     std::thread::sleep(std::time::Duration::from_millis(300));
     // generate a fresh public key

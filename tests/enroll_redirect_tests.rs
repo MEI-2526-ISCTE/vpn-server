@@ -7,6 +7,7 @@ fn duplicate_enroll_redirects_to_root() {
     let cfg = config::load_server_config(None).unwrap();
     let pub_b64 = "o1xtoMCHHFXtnsdwl3+GmUaPq+8OjscQLaO5xMSuf24=";
     let _cfg2 = peer_registry::add_peer(cfg, pub_b64.to_string()).unwrap();
+    std::env::set_var("VPN_HTTP_BIND", "127.0.0.1");
     enroll_http::spawn_enroll_server();
     std::thread::sleep(std::time::Duration::from_millis(300));
     let mut stream = std::net::TcpStream::connect(("127.0.0.1", 8080)).unwrap();
@@ -20,4 +21,3 @@ fn duplicate_enroll_redirects_to_root() {
     assert!(resp.starts_with("HTTP/1.1 303") || resp.starts_with("HTTP/1.0 303"));
     assert!(resp.contains("Location: /"));
 }
-

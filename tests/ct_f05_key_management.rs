@@ -13,6 +13,7 @@ fn ct_f05_validate_public_key_length() {
 
 #[test]
 fn ct_f05_enroll_invalid_key_returns_400() {
+    std::env::set_var("VPN_HTTP_BIND", "127.0.0.1");
     enroll_http::spawn_enroll_server();
     std::thread::sleep(std::time::Duration::from_millis(300));
     let mut stream = std::net::TcpStream::connect(("127.0.0.1", 8080)).unwrap();

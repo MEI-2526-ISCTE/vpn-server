@@ -15,8 +15,12 @@ static EMBED_INDEX: &str = include_str!("../public/index.html");
  */
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
-        let server = Server::http("0.0.0.0:8080").expect("Failed to bind enrollment HTTP server");
-        filelog::write_line("vpn-server.log", "Enrollment HTTP server bound on 0.0.0.0:8080");
+        let cfg = load_server_config(None).unwrap_or_default();
+        let vpn_ip = cfg.address_cidr.split('/').next().unwrap_or("127.0.0.1").to_string();
+        let bind = std::env::var("VPN_HTTP_BIND").unwrap_or_else(|_| vpn_ip);
+        let addr = format!("{}:8080", bind);
+        let server = Server::http(&addr).expect("Failed to bind enrollment HTTP server");
+        filelog::write_line("vpn-server.log", &format!("Enrollment HTTP server bound on {}", addr));
         loop {
             if let Ok(mut req) = server.recv() {
                 if req.method() == &Method::Post && req.url() == "/enroll" {

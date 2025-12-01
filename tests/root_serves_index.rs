@@ -3,6 +3,7 @@ use vpn_server::enroll_http;
 
 #[test]
 fn get_root_serves_index_html() {
+    std::env::set_var("VPN_HTTP_BIND", "127.0.0.1");
     enroll_http::spawn_enroll_server();
     std::thread::sleep(std::time::Duration::from_millis(300));
     let mut stream = std::net::TcpStream::connect(("127.0.0.1", 8080)).unwrap();
@@ -14,4 +15,3 @@ fn get_root_serves_index_html() {
     assert!(resp.contains("Content-Type: text/html"));
     assert!(resp.split("\r\n\r\n").nth(1).map(|b| !b.is_empty()).unwrap_or(false));
 }
-
