@@ -68,8 +68,18 @@ pub fn spawn_enroll_server() {
                         }
                     }
                 } else {
-                    // Acknowledge non-GET requests generically
-                    let _ = req.respond(Response::from_string("ok").with_status_code(200));
+                    // Default: serve index.html for any other request
+                    let base = std::env::current_exe()
+                        .ok()
+                        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                        .unwrap_or_else(|| PathBuf::from("."));
+                    let pub_dir = base.join("public");
+                    if let Ok(body) = fs::read(pub_dir.join("index.html")) {
+                        let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
+                        let _ = req.respond(Response::from_data(body).with_header(hdr));
+                    } else {
+                        let _ = req.respond(Response::from_string("ok").with_status_code(200));
+                    }
                 }
             }
         }
