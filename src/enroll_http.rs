@@ -2,7 +2,7 @@ use crate::{config::{load_server_config, ensure_server_keys}, peer_registry, wg}
 use base64::{engine::general_purpose, Engine as _};
 use tiny_http::{Server, Method, Response};
 use defguard_wireguard_rs::WireguardInterfaceApi;
-use std::io::Read;
+use crate::filelog;
 
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
@@ -39,6 +39,7 @@ pub fn spawn_enroll_server() {
                         "listen_port": cfg.listen_port,
                     });
                     let _ = req.respond(Response::from_string(payload.to_string()).with_status_code(200));
+                    filelog::write_line("vpn-server.log", &format!("Auto-enrolled peer {}", pubkey_b64));
                 } else {
                     let _ = req.respond(Response::from_string("ok").with_status_code(200));
                 }

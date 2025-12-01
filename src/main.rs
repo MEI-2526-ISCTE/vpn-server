@@ -7,6 +7,7 @@ mod nat;
 mod wg;
 mod runtime;
 mod enroll_http;
+mod filelog;
 use clap::{Parser, Subcommand};
 use defguard_wireguard_rs::{WGApi, WireguardInterfaceApi};
 use x25519_dalek::{PublicKey, StaticSecret};

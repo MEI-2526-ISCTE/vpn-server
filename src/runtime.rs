@@ -4,6 +4,7 @@ use defguard_wireguard_rs::{key::Key, InterfaceConfiguration, WGApi, WireguardIn
 use std::{collections::HashMap, fs, path::PathBuf, process::Command, sync::{Arc, atomic::{AtomicBool, Ordering}} , thread, time::{Duration, Instant}};
 use x25519_dalek::{PublicKey, StaticSecret};
 use crate::enroll_http;
+use crate::filelog;
 
 #[cfg(target_os = "windows")]
 fn windows_preflight() -> Result<(), Box<dyn std::error::Error>> {
@@ -78,6 +79,7 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "windows")] { wgapi.configure_interface(&config, &[], &[])?; }
     #[cfg(not(target_os = "windows"))] { wgapi.configure_interface(&config)?; }
     enroll_http::spawn_enroll_server();
+    filelog::write_line("vpn-server.log", &format!("Server live on UDP {}", cfg.listen_port));
     if cfg.nat_enabled { nat::setup_nat(&ifname, cfg.uplink_iface.as_deref()); }
     println!("WireGuard server is LIVE on UDP {}!", cfg.listen_port);
     println!("Server public key: {}", general_purpose::STANDARD.encode(server_public.as_bytes()));
@@ -94,7 +96,9 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
                         let now = Instant::now();
                         currently_connected.insert(peer_key.clone(), now);
                         if !last_seen.contains_key(peer_key) {
-                            println!("Client connected: {} ({})", peer_ip, general_purpose::STANDARD.encode(peer_key.as_slice()));
+                            let msg = format!("Client connected: {} ({})", peer_ip, general_purpose::STANDARD.encode(peer_key.as_slice()));
+                            println!("{}", msg);
+                            filelog::write_line("vpn-server.log", &msg);
                         }
                         last_seen.insert(peer_key.clone(), now);
                     }
@@ -104,7 +108,9 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
             for key in disconnected {
                 if last_seen.get(&key).unwrap().elapsed() > Duration::from_secs(180) {
                     let ip = data.peers.get(&key).and_then(|p| p.allowed_ips.first()).map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
-                    println!("Client disconnected: {} ({})", ip, general_purpose::STANDARD.encode(key.as_slice()));
+                    let msg = format!("Client disconnected: {} ({})", ip, general_purpose::STANDARD.encode(key.as_slice()));
+                    println!("{}", msg);
+                    filelog::write_line("vpn-server.log", &msg);
                     last_seen.remove(&key);
                 }
             }
@@ -115,5 +121,6 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
     let _ = Command::new("ip").args(["addr", "flush", "dev", &ifname]).output();
     wgapi.remove_interface()?;
     println!("Server stopped cleanly.");
+    filelog::write_line("vpn-server.log", "Server stopped cleanly.");
     Ok(())
 }
