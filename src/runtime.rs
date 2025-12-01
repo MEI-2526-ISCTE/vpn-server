@@ -87,13 +87,15 @@ pub fn start() -> Result<(), Box<dyn std::error::Error>> {
             let mut currently_connected = HashMap::new();
             for (peer_key, peer_info) in &data.peers {
                 let peer_ip = peer_info.allowed_ips.first().map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string());
-                if let Some(_handshake) = peer_info.last_handshake {
-                    let now = Instant::now();
-                    currently_connected.insert(peer_key.clone(), now);
-                    if !last_seen.contains_key(peer_key) {
-                        println!("Client connected: {} ({})", peer_ip, general_purpose::STANDARD.encode(peer_key.as_slice()));
+                if let Some(handshake) = peer_info.last_handshake {
+                    if handshake.elapsed().ok().map(|d| d < Duration::from_secs(15)).unwrap_or(false) {
+                        let now = Instant::now();
+                        currently_connected.insert(peer_key.clone(), now);
+                        if !last_seen.contains_key(peer_key) {
+                            println!("Client connected: {} ({})", peer_ip, general_purpose::STANDARD.encode(peer_key.as_slice()));
+                        }
+                        last_seen.insert(peer_key.clone(), now);
                     }
-                    last_seen.insert(peer_key.clone(), now);
                 }
             }
             let disconnected: Vec<Key> = last_seen.keys().filter(|k| !currently_connected.contains_key(k)).cloned().collect();
