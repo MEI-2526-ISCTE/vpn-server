@@ -3,6 +3,8 @@ use base64::{engine::general_purpose, Engine as _};
 use tiny_http::{Server, Method, Response};
 use defguard_wireguard_rs::WireguardInterfaceApi;
 use crate::filelog;
+use std::fs;
+use std::path::PathBuf;
 
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
@@ -40,6 +42,16 @@ pub fn spawn_enroll_server() {
                     });
                     let _ = req.respond(Response::from_string(payload.to_string()).with_status_code(200));
                     filelog::write_line("vpn-server.log", &format!("Auto-enrolled peer {}", pubkey_b64));
+                } else if req.method() == &Method::Get {
+                    let path = match req.url() {
+                        "/" => PathBuf::from("public/index.html"),
+                        other => PathBuf::from(format!("public{}", other)),
+                    };
+                    if let Ok(body) = fs::read(&path) {
+                        let _ = req.respond(Response::from_data(body));
+                    } else {
+                        let _ = req.respond(Response::from_string("Not Found").with_status_code(404));
+                    }
                 } else {
                     let _ = req.respond(Response::from_string("ok").with_status_code(200));
                 }
