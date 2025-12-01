@@ -24,3 +24,4 @@ server.toml
 wg-server.conf
 utun3.conf
 enroll
+vpn-server.log
