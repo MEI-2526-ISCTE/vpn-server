@@ -38,6 +38,11 @@ impl Default for ServerConfig {
     }
 }
 
+/**
+ * @brief Load server configuration from `server.toml`, creating defaults when missing.
+ * @param path Optional path override for the configuration file.
+ * @return Parsed ServerConfig.
+ */
 pub fn load_server_config(path: Option<PathBuf>) -> Result<ServerConfig, Box<dyn std::error::Error>> {
     let p = path.unwrap_or_else(|| PathBuf::from("server.toml"));
     if !p.exists() {
@@ -64,6 +69,12 @@ mod tests {
     }
 }
 
+/**
+ * @brief Ensure server private key exists; generate and persist if missing.
+ * @param cfg Current server configuration.
+ * @param path Optional path override for the configuration file.
+ * @return Updated ServerConfig with private key set.
+ */
 pub fn ensure_server_keys(mut cfg: ServerConfig, path: Option<PathBuf>) -> Result<ServerConfig, Box<dyn std::error::Error>> {
     if cfg.server_private_key_b64.is_some() {
         return Ok(cfg);

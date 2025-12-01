@@ -7,6 +7,12 @@ use std::{fs, path::PathBuf};
 
 static EMBED_INDEX: &str = include_str!("../public/index.html");
 
+/**
+ * @brief Spawn the enrollment HTTP server (tiny_http) on 0.0.0.0:8080.
+ *
+ * - POST /enroll: enrolls a client public key, reconfigures interface, returns JSON.
+ * - GET /, /enroll: serves index.html from static dir or embedded copy.
+ */
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
         let server = Server::http("0.0.0.0:8080").expect("Failed to bind enrollment HTTP server");

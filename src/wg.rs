@@ -3,6 +3,11 @@ use base64::{engine::general_purpose, Engine as _};
 use defguard_wireguard_rs::{host::Peer, key::Key, net::IpAddrMask, InterfaceConfiguration};
 use std::str::FromStr;
 
+/**
+ * @brief Build WireGuard peers from server configuration.
+ * @param cfg Server configuration containing peer entries and allowed IPs.
+ * @return Vector of `(Peer, Key)` pairs ready to be applied to the interface.
+ */
 pub fn peers_from_config(cfg: &ServerConfig) -> Result<Vec<(Peer, Key)>, Box<dyn std::error::Error>> {
     let mut out = Vec::new();
     for pc in cfg.peers.iter() {
@@ -17,6 +22,14 @@ pub fn peers_from_config(cfg: &ServerConfig) -> Result<Vec<(Peer, Key)>, Box<dyn
     Ok(out)
 }
 
+/**
+ * @brief Build WireGuard interface configuration for the server.
+ * @param cfg Server configuration.
+ * @param ifname Interface name.
+ * @param server_privkey_b64 Base64-encoded server private key.
+ * @param peers List of peers and their public keys.
+ * @return InterfaceConfiguration ready to apply.
+ */
 pub fn interface_config(
     cfg: &ServerConfig,
     ifname: &str,

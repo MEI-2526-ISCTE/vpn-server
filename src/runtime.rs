@@ -6,6 +6,9 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use crate::enroll_http;
 use crate::filelog;
 
+/**
+ * @brief Windows-only preflight checks: WireGuard presence and Administrator rights.
+ */
 #[cfg(target_os = "windows")]
 fn windows_preflight() -> Result<(), Box<dyn std::error::Error>> {
     let wg_ok = Command::new("wireguard.exe").arg("/version").output();
@@ -23,6 +26,11 @@ fn windows_preflight() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/**
+ * @brief Scan auto-enroll directory for public keys and add peers dynamically.
+ * @param cfg Mutable server configuration.
+ * @param wgapi WireGuard API handle for reconfiguring peers.
+ */
 fn scan_enroll_dir(cfg: &mut crate::config::ServerConfig, wgapi: &WGApi<defguard_wireguard_rs::Kernel>) -> Result<(), Box<dyn std::error::Error>> {
     let dir = cfg.auto_enroll_dir.clone().unwrap_or_else(|| "enroll".into());
     let p = PathBuf::from(&dir);
@@ -54,6 +62,9 @@ fn scan_enroll_dir(cfg: &mut crate::config::ServerConfig, wgapi: &WGApi<defguard
     Ok(())
 }
 
+/**
+ * @brief Start the WireGuard server runtime, configure interface, run enroll HTTP, and monitor clients.
+ */
 pub fn start() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(target_os = "windows")]
     {
