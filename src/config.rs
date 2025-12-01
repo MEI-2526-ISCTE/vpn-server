@@ -19,6 +19,7 @@ pub struct ServerConfig {
     pub uplink_iface: Option<String>,
     pub server_private_key_b64: Option<String>,
     pub auto_enroll_dir: Option<String>,
+    pub static_dir: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -32,6 +33,7 @@ impl Default for ServerConfig {
             uplink_iface: None,
             server_private_key_b64: None,
             auto_enroll_dir: Some("enroll".into()),
+            static_dir: Some("public".into()),
         }
     }
 }

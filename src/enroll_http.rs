@@ -5,6 +5,8 @@ use defguard_wireguard_rs::WireguardInterfaceApi;
 use crate::filelog;
 use std::{fs, path::PathBuf};
 
+static EMBED_INDEX: &str = include_str!("../public/index.html");
+
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
         let server = Server::http("0.0.0.0:8080").expect("Failed to bind enrollment HTTP server");
@@ -42,12 +44,13 @@ pub fn spawn_enroll_server() {
                     let _ = req.respond(Response::from_string(payload.to_string()).with_status_code(200));
                     filelog::write_line("vpn-server.log", &format!("Auto-enrolled peer {}", pubkey_b64));
                 } else if req.method() == &Method::Get || req.method() == &Method::Head {
-                    // Resolve public directory relative to executable location for robustness
-                    let base = std::env::current_exe()
-                        .ok()
-                        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-                        .unwrap_or_else(|| PathBuf::from("."));
-                    let pub_dir = base.join("public");
+                    let cfg = load_server_config(None).unwrap_or_default();
+                    let static_dir = cfg.static_dir.clone().unwrap_or_else(|| "public".into());
+                    // Try CWD/static_dir then binary_dir/static_dir
+                    let pub_dir_cwd = PathBuf::from(&static_dir);
+                    let base = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())).unwrap_or_else(|| PathBuf::from("."));
+                    let pub_dir_bin = base.join(&static_dir);
+                    let pub_dir = if pub_dir_cwd.exists() { pub_dir_cwd } else { pub_dir_bin };
                     let path = match req.url() {
                         "/" => pub_dir.join("index.html"),
                         other => {
@@ -59,27 +62,20 @@ pub fn spawn_enroll_server() {
                         let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
                         let _ = req.respond(Response::from_data(body).with_header(hdr));
                     } else {
-                        // Fallback to index.html
+                        // Fallback to index.html or embedded
                         if let Ok(body) = fs::read(pub_dir.join("index.html")) {
                             let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
                             let _ = req.respond(Response::from_data(body).with_header(hdr));
                         } else {
-                            let _ = req.respond(Response::from_string("Not Found").with_status_code(404));
+                            filelog::write_line("vpn-server.log", &format!("Static dir missing or index not found, serving embedded index from {}", static_dir));
+                            let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
+                            let _ = req.respond(Response::from_string(EMBED_INDEX).with_header(hdr));
                         }
                     }
                 } else {
-                    // Default: serve index.html for any other request
-                    let base = std::env::current_exe()
-                        .ok()
-                        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-                        .unwrap_or_else(|| PathBuf::from("."));
-                    let pub_dir = base.join("public");
-                    if let Ok(body) = fs::read(pub_dir.join("index.html")) {
-                        let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
-                        let _ = req.respond(Response::from_data(body).with_header(hdr));
-                    } else {
-                        let _ = req.respond(Response::from_string("ok").with_status_code(200));
-                    }
+                    // Default: serve index.html or embedded for any other request
+                    let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
+                    let _ = req.respond(Response::from_string(EMBED_INDEX).with_header(hdr));
                 }
             }
         }
