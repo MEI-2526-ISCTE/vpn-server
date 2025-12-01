@@ -3,8 +3,7 @@ use base64::{engine::general_purpose, Engine as _};
 use tiny_http::{Server, Method, Response, Header};
 use defguard_wireguard_rs::WireguardInterfaceApi;
 use crate::filelog;
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
@@ -43,16 +42,25 @@ pub fn spawn_enroll_server() {
                     let _ = req.respond(Response::from_string(payload.to_string()).with_status_code(200));
                     filelog::write_line("vpn-server.log", &format!("Auto-enrolled peer {}", pubkey_b64));
                 } else if req.method() == &Method::Get || req.method() == &Method::Head {
+                    // Resolve public directory relative to executable location for robustness
+                    let base = std::env::current_exe()
+                        .ok()
+                        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                        .unwrap_or_else(|| PathBuf::from("."));
+                    let pub_dir = base.join("public");
                     let path = match req.url() {
-                        "/" => PathBuf::from("public/index.html"),
-                        other => PathBuf::from(format!("public{}", other)),
+                        "/" => pub_dir.join("index.html"),
+                        other => {
+                            let rel = other.trim_start_matches('/');
+                            pub_dir.join(rel)
+                        }
                     };
                     if let Ok(body) = fs::read(&path) {
                         let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
                         let _ = req.respond(Response::from_data(body).with_header(hdr));
                     } else {
                         // Fallback to index.html
-                        if let Ok(body) = fs::read("public/index.html") {
+                        if let Ok(body) = fs::read(pub_dir.join("index.html")) {
                             let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
                             let _ = req.respond(Response::from_data(body).with_header(hdr));
                         } else {
