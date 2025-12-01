@@ -22,18 +22,8 @@ pub fn spawn_enroll_server() {
                         continue;
                     }
                     if cfg.peers.iter().any(|p| p.public_key_b64 == pubkey_b64) {
-                        let static_dir = cfg.static_dir.clone().unwrap_or_else(|| "public".into());
-                        let pub_dir_cwd = PathBuf::from(&static_dir);
-                        let base = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())).unwrap_or_else(|| PathBuf::from("."));
-                        let pub_dir_bin = base.join(&static_dir);
-                        let pub_dir = if pub_dir_cwd.exists() { pub_dir_cwd } else { pub_dir_bin };
-                        if let Ok(body) = fs::read(pub_dir.join("index.html")) {
-                            let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
-                            let _ = req.respond(Response::from_data(body).with_header(hdr));
-                        } else {
-                            let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap();
-                            let _ = req.respond(Response::from_string(EMBED_INDEX).with_header(hdr));
-                        }
+                        let loc = Header::from_bytes(&b"Location"[..], &b"/"[..]).unwrap();
+                        let _ = req.respond(Response::from_string("").with_header(loc).with_status_code(303));
                         continue;
                     }
                     cfg = match peer_registry::add_peer(cfg, pubkey_b64.to_string()) { Ok(n) => n, Err(e) => { let _ = req.respond(Response::from_string(format!("err: {}", e)).with_status_code(500)); continue; } };
