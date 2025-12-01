@@ -16,6 +16,7 @@ static EMBED_INDEX: &str = include_str!("../public/index.html");
 pub fn spawn_enroll_server() {
     std::thread::spawn(|| {
         let server = Server::http("0.0.0.0:8080").expect("Failed to bind enrollment HTTP server");
+        filelog::write_line("vpn-server.log", "Enrollment HTTP server bound on 0.0.0.0:8080");
         loop {
             if let Ok(mut req) = server.recv() {
                 if req.method() == &Method::Post && req.url() == "/enroll" {
@@ -54,11 +55,11 @@ pub fn spawn_enroll_server() {
                 } else if req.method() == &Method::Get || req.method() == &Method::Head {
                     let cfg = load_server_config(None).unwrap_or_default();
                     let static_dir = cfg.static_dir.clone().unwrap_or_else(|| "public".into());
-                    // Try CWD/static_dir then binary_dir/static_dir
-                    let pub_dir_cwd = PathBuf::from(&static_dir);
+                    // Prefer binary_dir/static_dir, then fall back to CWD/static_dir
                     let base = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())).unwrap_or_else(|| PathBuf::from("."));
                     let pub_dir_bin = base.join(&static_dir);
-                    let pub_dir = if pub_dir_cwd.exists() { pub_dir_cwd } else { pub_dir_bin };
+                    let pub_dir_cwd = PathBuf::from(&static_dir);
+                    let pub_dir = if pub_dir_bin.exists() { pub_dir_bin } else { pub_dir_cwd };
                     let path = match req.url() {
                         "/" | "/enroll" => pub_dir.join("index.html"),
                         other => {
