@@ -18,6 +18,7 @@ pub struct ServerConfig {
     pub nat_enabled: bool,
     pub uplink_iface: Option<String>,
     pub server_private_key_b64: Option<String>,
+    pub auto_enroll_dir: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -30,6 +31,7 @@ impl Default for ServerConfig {
             nat_enabled: true,
             uplink_iface: None,
             server_private_key_b64: None,
+            auto_enroll_dir: Some("enroll".into()),
         }
     }
 }
