@@ -64,6 +64,18 @@ pub fn spawn_enroll_server() {
                     let pub_dir_bin = base.join(&static_dir);
                     let pub_dir_cwd = PathBuf::from(&static_dir);
                     let pub_dir = if pub_dir_bin.exists() { pub_dir_bin } else { pub_dir_cwd };
+                    if req.url() == "/__ping" {
+                        let hdr = Header::from_bytes(&b"Content-Type"[..], &b"text/plain; charset=utf-8"[..]).unwrap();
+                        let _ = req.respond(Response::from_string("pong").with_header(hdr));
+                        continue;
+                    }
+                    if req.url() == "/__perf.bin" {
+                        let n: usize = std::env::var("PERF_BYTES").ok().and_then(|v| v.parse().ok()).unwrap_or(50 * 1024 * 1024);
+                        let data = vec![0u8; n];
+                        let hdr = Header::from_bytes(&b"Content-Type"[..], &b"application/octet-stream"[..]).unwrap();
+                        let _ = req.respond(Response::from_data(data).with_header(hdr));
+                        continue;
+                    }
                     let path = match req.url() {
                         "/" | "/enroll" => pub_dir.join("index.html"),
                         other => {
